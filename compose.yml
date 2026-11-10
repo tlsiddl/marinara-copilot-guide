@@ -1,0 +1,21 @@
+services:
+  copilot-bridge:
+    build: .
+    restart: unless-stopped
+    mem_limit: 768m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      COPILOT_PROXY_API_KEY: ${COPILOT_PROXY_API_KEY:?Set a random API key in .env}
+    volumes:
+      - copilot-auth:/home/copilot/.copilot
+    networks:
+      - marinara
+networks:
+  marinara:
+    name: ${MARINARA_NETWORK:?Set the existing Marinara Docker network in .env}
+    external: true
+volumes:
+  copilot-auth:
