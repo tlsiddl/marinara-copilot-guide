@@ -1,12 +1,13 @@
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 process.env.COPILOT_PROXY_API_KEY = 'test-only-credential-at-least-32-characters';
-const {app} = await import('../index.js');
+const {app, HOST} = await import('../index.js');
 const server = app.listen(0,'127.0.0.1');
 await new Promise(resolve => server.once('listening', resolve));
 const base = `http://127.0.0.1:${server.address().port}`;
 after(() => server.close());
 const authorization = 'Bearer ' + process.env.COPILOT_PROXY_API_KEY;
+test('native default binds to loopback', () => assert.equal(HOST, '127.0.0.1'));
 test('private endpoint needs correct bearer key', async () => {
   assert.equal((await fetch(base+'/health')).status, 401);
   assert.equal((await fetch(base+'/health',{headers:{Authorization:'Bearer wrong'}})).status, 401);

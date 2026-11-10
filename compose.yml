@@ -8,6 +8,7 @@ services:
     security_opt:
       - no-new-privileges:true
     environment:
+      COPILOT_PROXY_HOST: 0.0.0.0
       COPILOT_PROXY_API_KEY: ${COPILOT_PROXY_API_KEY:?Set a random API key in .env}
     volumes:
       - copilot-auth:/home/copilot/.copilot

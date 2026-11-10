@@ -73,6 +73,7 @@ app.use((req, res, next) => {
 });
 
 const PORT = opts.port;
+const HOST = process.env.COPILOT_PROXY_HOST || "127.0.0.1";
 const DEFAULT_MODEL = opts.model;
 
 function writeLog(...args) {
@@ -1752,7 +1753,7 @@ if (isMain) {
       }
 
       // Start server
-      app.listen(PORT, '0.0.0.0', () => {
+      app.listen(PORT, HOST, () => {
         console.error(`OpenAI-compatible proxy server running at http://localhost:${PORT}`);
         console.error(`Default model: ${DEFAULT_MODEL}`);
         console.error("Endpoints:");
@@ -1804,4 +1805,4 @@ export {
   responsesInputToMessages,
 };
 
-export { app };
+export { app, HOST };

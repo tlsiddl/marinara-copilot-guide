@@ -4,6 +4,43 @@ GitHub Copilot SDK로 동작하는 별도 Docker 프록시를 통해 Marinara En
 
 > 이 프로젝트는 [rezrov/copilot-proxy](https://github.com/rezrov/copilot-proxy)의 MIT 라이선스 코드를 바탕으로 API 키 검증, 텍스트 요청 전용 제한, 스트리밍 ID 수정과 Docker 설정을 추가했습니다. 원 저작권 표시는 `LICENSE`에 있습니다. GitHub가 이 프록시를 보증하지 않습니다.
 
+## 먼저: 왜 프록시가 필요한가요?
+
+마리나라의 OpenAI 호환 연결은 **HTTP 주소와 API 키를 받는 서버**를 찾습니다. GitHub Copilot 구독은 GitHub 계정으로 로그인하는 서비스라서, 구독 화면에서 마리나라에 바로 넣을 OpenAI 호환 주소와 키가 생기는 방식이 아닙니다. 이 프로젝트는 그 사이에서 요청 형식을 연결합니다.
+
+`마리나라 → 이 저장소의 프록시 → GitHub Copilot SDK/CLI → Copilot 모델`
+
+프록시가 Copilot 구독을 일반 API 결제로 바꿔 주는 것은 아닙니다. Copilot SDK의 에이전트 실행 방식과 시스템 지시가 적용되며 일반 모델 API와 결과·사용량이 다를 수 있습니다. 지원 모델·이용 가능 범위·가격은 GitHub가 바꿀 수 있습니다. 이 프로젝트는 비공식 호환 프로젝트입니다.
+
+### 헷갈리기 쉬운 세 가지
+
+1. **GitHub 로그인:** 기기 인증 화면에서 본인이 GitHub 계정에 로그인합니다. CLI가 요청하는 권한과 토큰 저장 방식을 확인하세요.
+2. **프록시 API 키:** 설치 중 직접 생성하는 비밀 문자열입니다. 마리나라가 내 프록시에 접속할 때만 쓰고, GitHub 비밀번호나 GitHub 토큰과는 다릅니다.
+3. **Copilot 크레딧:** 모델을 쓸 때 GitHub 계정에서 소모되는 사용 한도입니다. 마리나라 요금과 별개이며 [GitHub 사용량 화면](https://github.com/settings/billing)에서 확인합니다.
+
+**비밀번호, GitHub 토큰, 프록시 API 키를 스크린샷·채팅·이슈에 올리지 마세요.** 문제 해결에 다른 AI의 도움을 받을 때도 민감한 내용을 지운 오류만 전달하세요.
+
+### 내 환경은 무엇인가요?
+
+- 마리나라가 **Vultr 같은 Linux 서버의 Docker**에 있다면 프록시도 같은 서버 Docker에 설치하는 것이 가장 단순합니다. 아래 Linux 단계를 사용하세요. 노트북의 운영체제와는 무관합니다.
+- 마리나라가 **Windows PC에서 Docker로** 돌아간다면 Windows 가이드의 Docker 항목을 사용하세요.
+- 마리나라가 **Windows PC에서 직접** 돌아간다면 Windows 가이드의 직접 실행 항목을 사용하세요. 다른 서버에서 돌아가는 마리나라에는 적용되지 않습니다.
+- 마리나라와 프록시를 **같은 안드로이드 기기의 Termux**에서 돌리고 싶다면 Termux 가이드를 보세요. 이 경로는 실험적이며 아직 실기기에서 검증되지 않았습니다.
+
+### 설치 전에 준비할 것
+
+- 접속할 GitHub 계정과 Copilot 플랜. 유료 결제는 이 가이드가 대신 진행하지 않습니다.
+- 마리나라가 정상 실행되는 환경과 해당 컴퓨터/서버의 터미널 접근 권한.
+- Docker 경로: Docker Engine, Compose, Git, openssl. 윈도우 직접 실행 경로: Node.js 22 이상, Git, PowerShell 6 이상.
+- 설치 중 GitHub 기기 인증을 직접 승인할 수 있는 브라우저. 서버 SSH 비밀번호나 GitHub 비밀번호를 AI에게 보내지 마세요.
+- 기존 마리나라 데이터와 설정을 보존할 것. 이 설치는 기존 마리나라 컨테이너나 볼륨을 삭제하지 않습니다. 내부 주소 허용을 따로 바꾼다면 그 설정을 먼저 백업하세요.
+
+## 운영체제별 안내
+
+- **Linux + Docker:** 이 문서의 아래 단계를 따릅니다.
+- **Windows:** [Docker 또는 Windows 직접 실행 가이드](docs/windows.md)
+- **Termux / Android:** [실험적 PRoot Ubuntu 가이드](docs/termux.md) — 실기기 미검증, Android 네이티브 CLI 지원 제약 있음
+
 ## 시작하기 전
 
 - Linux 서버, Docker와 Docker Compose, 실행 중인 Marinara Engine이 필요합니다. 아래 예시는 서버 터미널 명령입니다.
@@ -15,10 +52,10 @@ GitHub Copilot SDK로 동작하는 별도 Docker 프록시를 통해 Marinara En
 
 ## 1. 마리나라 네트워크 확인
 
-서버에 저장소를 내려받습니다. 저장소 주소는 GitHub 화면의 **Code → HTTPS**에서 복사하세요.
+서버에서 터미널을 열고 저장소를 내려받습니다. 다음 명령을 한 줄씩 실행하세요.
 
 ```sh
-git clone <이-저장소의-HTTPS-주소> marinara-copilot
+git clone https://github.com/tlsiddl/marinara-copilot-guide.git marinara-copilot
 cd marinara-copilot
 ```
 
@@ -39,11 +76,15 @@ docker inspect <마리나라-컨테이너> --format '{{range $name, $network := 
 아래 `<마리나라-네트워크>`를 위에서 확인한 이름으로 바꾸세요. 이 파일에는 접속 비밀번호가 들어가므로 다른 사람에게 보내거나 GitHub에 올리지 마세요.
 
 ```sh
-umask 077
-printf 'MARINARA_NETWORK=%s\n' '<마리나라-네트워크>' > .env
-printf 'COPILOT_PROXY_API_KEY=' >> .env
-openssl rand -hex 32 >> .env
-chmod 600 .env
+if [ -e .env ]; then
+  echo '.env가 이미 있습니다. 덮어쓰지 않았습니다. 기존 내용을 안전하게 확인하세요.'
+else
+  umask 077
+  printf 'MARINARA_NETWORK=%s\n' '<마리나라-네트워크>' > .env
+  printf 'COPILOT_PROXY_API_KEY=' >> .env
+  openssl rand -hex 32 >> .env
+  chmod 600 .env
+fi
 docker compose build
 ```
 
@@ -74,7 +115,7 @@ docker compose run --rm --no-deps --entrypoint node copilot-bridge index.js --li
 
 1. Connections에서 **OpenAI-compatible address** 계정을 추가합니다.
 2. 서버 주소로 `http://copilot-bridge:3001/v1`을 입력합니다. 이 주소는 마리나라 **컨테이너 내부**에서 사용하는 주소입니다.
-3. API 키에는 `.env`의 `COPILOT_PROXY_API_KEY=` 뒤에 있는 값만 넣습니다. `.env` 파일 전체나 GitHub 로그인 토큰이 아닙니다.
+3. API 키에는 `.env`의 `COPILOT_PROXY_API_KEY=` 뒤에 있는 값만 넣습니다. `.env` 파일 전체나 GitHub 로그인 토큰이 아닙니다. 필요한 경우 본인만 볼 수 있는 터미널에서 `cat .env`로 확인하세요. 이 화면을 스크린샷·채팅·방송에 공유하지 마세요.
 4. 조회된 모델 중 사용할 모델을 추가하고, 짧은 요청과 스트리밍을 시험합니다. 기존 기본 모델을 바꾸는 것은 선택 사항입니다.
 
 마리나라가 사설 주소를 거부한다면 먼저 오류를 확인하세요. 일부 버전은 마리나라의 데이터 `.env`에 `PROVIDER_LOCAL_URLS_ENABLED=true` 설정을 요구합니다. 이 설정은 **이 프록시뿐 아니라 다른 사설·로컬 주소로의 제공자 접근도 허용**합니다. 보안 영향을 이해하고 승인한 뒤에만 설정하세요. 설치 형태에 따라 활성 `.env` 위치와 적용 방식은 다를 수 있으므로 문서와 현재 실행 환경을 먼저 확인하고 기존 설정을 백업하세요. 이 저장소는 마리나라 설정을 자동으로 바꾸지 않습니다.
